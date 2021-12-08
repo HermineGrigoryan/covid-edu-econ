@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import statsmodels.api as sm
 
 
@@ -35,50 +36,67 @@ st.markdown(
         unsafe_allow_html=True,
     )
 
-st.write("# COVID and Economic Factors")
+st.write("## Impact of Economic and Education Factors on COVID Rates")
 passw = st.text_input("Password:", value="", type="password")
 if passw=='my_pass':
 
     df = pd.read_csv('final_df.csv')
     df.columns = [i.replace('_', ' ').title() for i in df.columns]
 
-    st.sidebar.write('### COVID and Economic Factors')
+    st.sidebar.write('### COVID Analysis')
     navigation = st.sidebar.radio('Navigation', 
-                        ['Summary statistics', 'Visualizations', 'Modeling'], 0)
+                        ['Summary Statistics', 'Simple Linear Regression', 'Multiple Linear Regression'], 0)
     
-    if navigation == 'Summary statistics':
+    if navigation == 'Summary Statistics':
         st.subheader('Overall Info on the Data')
-        show_profile = st.checkbox('Show dataset description')
-        if show_profile:
-            '''
-            The data for the analysis ...
-            '''
-            profiling_table = pd.DataFrame({
-                'Number of variables' : [df.shape[1]],
-                'Number of observations' : [df.shape[0]],
-                'Missing cells' : [df.isna().sum().sum()],
-                'Missing cells (%)' : [df.isna().sum().sum()/df.shape[0]]
-            })
-            st.table(profiling_table)
+        '''
+        The aim of this project is to assess the impact of economic and educational factors of
+        different countries on COVID vaccination rates.
+        The data on 112 countries was obtained from [Trading Economics.](https://tradingeconomics.com/).
+        '''
+        profiling_table = pd.DataFrame({
+            'Number of variables' : [df.shape[1]],
+            'Number of observations' : [df.shape[0]],
+            'Missing cells' : [df.isna().sum().sum()],
+            'Missing cells (%)' : [df.isna().sum().sum()/df.shape[0]]
+        })
+        st.table(profiling_table)
 
-            st.markdown('_'*100) # adding a breaking line
-            st.subheader('Data Exploration')
-            head_count = st.slider('How many rows of data to show?', 5, 250, 5, 5)
-            which_columns = st.multiselect('Which columns to show?', df.columns.tolist(), Y_vars)
-            st.dataframe(df[which_columns].head(head_count))
+        st.markdown('_'*100) # adding a breaking line
+        st.subheader('Data Exploration')
+        head_count = st.slider('How many rows of data to show?', 5, 250, 5, 5)
+        which_columns = st.multiselect('Which columns to show?', df.columns.tolist(), Y_vars)
+        st.dataframe(df[which_columns].head(head_count))
 
-            st.markdown('_'*100) # adding a breaking line
-            st.subheader('Summary Statistics per continent')
-            col1, col2 = st.beta_columns([1,1])
-            continuous_var = col1.selectbox('Continuous variable', df.columns.tolist(), 6)
-            grouping_var_sum_stats = st.selectbox('Grouping variable', ['Continent', 'Sub Region'], 0)
-            agg_func = col2.multiselect('Aggregation function', 
-            ['mean', 'median', 'std', 'count'], ['mean', 'count'])
+        st.markdown('_'*100) # adding a breaking line
+        st.subheader('Summary Statistics per Continent & Sub-region')
+        col1, col2, col3 = st.beta_columns([1, 1, 1])
+        continuous_var = col1.selectbox('Continuous variable', Y_vars+X_vars)
+        grouping_var_sum_stats = col2.selectbox('Grouping variable', ['Continent', 'Sub Region'], 0)
+        agg_func = col3.multiselect('Aggregation function', 
+        ['mean', 'median', 'std', 'count'], ['mean', 'count'])
 
-            sum_stats = df.groupby(grouping_var_sum_stats)[continuous_var].agg(agg_func)
-            st.dataframe(sum_stats)
+        sum_stats = df.groupby(grouping_var_sum_stats)[continuous_var].agg(agg_func)
+        st.dataframe(sum_stats)
 
-    if navigation == 'Visualizations':
+        st.markdown('_'*100) # adding a breaking line
+        st.subheader('Visualizations')
+        col1_bar, col2_bar = st.beta_columns([1, 1])
+        x_var_bar = col1_bar.selectbox('X variable (histogram)', df.columns.tolist(), 6)
+        grouping_var_bar = col2_bar.selectbox('Grouping variable (barplot)', grouping_vars)
+        st.plotly_chart(px.histogram(df, x_var_bar, color=grouping_var_bar), use_container_width=True) 
+
+        st.markdown('_'*100) # adding a breaking line
+        col1_box, col2_box, col3_box = st.beta_columns(3)
+        x_var_box = col1_box.selectbox('X variable (boxplot)', grouping_vars, 1)
+        y_var_box = col2_box.selectbox('Y variable (boxplot)', df.columns.tolist(), 10)
+        grouping_var_box = col3_box.selectbox('Color variable (boxplot)', grouping_vars, 0)
+        st.plotly_chart(px.box(df, x_var_box, y_var_box, color=grouping_var_box, hover_data=['Country']), use_container_width=True)
+
+
+
+
+    if navigation == 'Simple Linear Regression':
         st.markdown('_'*100) # adding a breaking line
         col1_scatter, col2_scatter, col3_scatter = st.beta_columns(3)
         x_var_scatter = col1_scatter.selectbox('X variable (scatter)', X_vars, 1)
@@ -90,24 +108,29 @@ if passw=='my_pass':
         x_transformation = st.selectbox('Transformatin of X variable', 
                                         ['No transformation', 'log', 'square'], 0)
         
+        x_seq = np.linspace(min(df[x_var_scatter]), max(df[x_var_scatter]), 100)
         if x_transformation == 'No transformation':
             Y = df[y_var_scatter]
             X = df[x_var_scatter]
+            x_seq_constant = sm.add_constant(x_seq)
 
         elif x_transformation == 'log':
             Y = df[y_var_scatter]
             X = np.log(df[x_var_scatter])
+            x_seq_constant = sm.add_constant(np.log(x_seq))
 
         elif x_transformation == 'square':
             Y = df[y_var_scatter]
             X = df[x_var_scatter]**2
+            x_seq_constant = sm.add_constant(x_seq**2)
 
+        corr_df = pd.concat([X, Y], axis=1).dropna()
+        correlation = np.corrcoef(corr_df[x_var_scatter], corr_df[y_var_scatter])[0][1]
         X = sm.add_constant(X)
         model = sm.OLS(Y,X, missing='drop')
         results = model.fit()
+        y_pred = results.predict(x_seq_constant)
         
-        corr_df = df[[x_var_scatter, y_var_scatter]].dropna()
-        correlation = np.corrcoef(corr_df[x_var_scatter], corr_df[y_var_scatter])[0][1]
         scatter_plot = px.scatter(df, x_var_scatter, 
                                       y_var_scatter, 
                                       color=grouping_var_scatter, 
@@ -115,24 +138,13 @@ if passw=='my_pass':
                                     #   trendline="ols",
                                       title=f'Correlation coefficient: {round(correlation, 5)}')
         
+        scatter_plot.add_trace(go.Scatter(x=x_seq, y=y_pred, 
+                               marker=dict(color='black'),
+                               name='Prediction'))
         st.plotly_chart(scatter_plot, use_container_width=True)
         st.write(results.summary())
 
-
-        col1_bar, col2_bar = st.beta_columns([1, 1])
-        x_var_bar = col1_bar.selectbox('X variable (histogram)', df.columns.tolist(), 6)
-        grouping_var_bar = col2_bar.selectbox('Grouping variable (barplot)', grouping_vars)
-        st.plotly_chart(px.histogram(df, x_var_bar, color=grouping_var_bar), use_container_width=True) 
-
-        st.markdown('_'*100) # adding a breaking line
-        col1_box, col2_box, col3_box = st.beta_columns(3)
-        x_var_box = col1_box.selectbox('X variable (boxplot)', grouping_vars, 1)
-        y_var_box = col2_box.selectbox('Y variable (boxplot)', df.columns.tolist(), 6)
-        grouping_var_box = col3_box.selectbox('Color variable (boxplot)', grouping_vars, 0)
-        st.plotly_chart(px.box(df, x_var_box, y_var_box, color=grouping_var_box), use_container_width=True)
-
-
-    if navigation == 'Modeling':
+    if navigation == 'Multiple Linear Regression':
         x_vars_model = st.multiselect('X variables', X_vars, ['Gdp Per Cap Ppp'])
         y_var_model = st.radio('Y variable', Y_vars, 2)
         Y = df[y_var_model]
