@@ -40,19 +40,20 @@ st.write("## Impact of Economic and Education Factors on COVID Rates")
 passw = st.text_input("Password:", value="", type="password")
 if passw=='my_pass':
 
-    df = pd.read_csv('final_df.csv')
+    df = pd.read_csv('data/final_df.csv')
     df.columns = [i.replace('_', ' ').title() for i in df.columns]
 
     st.sidebar.write('### COVID Analysis')
     navigation = st.sidebar.radio('Navigation', 
-                        ['Summary Statistics', 'Simple Linear Regression', 'Multiple Linear Regression'], 0)
+                        ['Exploratory Data Analysis', 'Simple Linear Regression', 'Multiple Linear Regression'], 0)
     
-    if navigation == 'Summary Statistics':
+    if navigation == 'Exploratory Data Analysis':
         st.subheader('Overall Info on the Data')
         '''
         The aim of this project is to assess the impact of economic and educational factors of
         different countries on COVID vaccination rates.
-        The data on 112 countries was obtained from [Trading Economics.](https://tradingeconomics.com/).
+        The data on 112 countries was obtained from [Trading Economics.](https://tradingeconomics.com/)
+        and WorldBank.
         '''
         profiling_table = pd.DataFrame({
             'Number of variables' : [df.shape[1]],
@@ -70,7 +71,7 @@ if passw=='my_pass':
 
         st.markdown('_'*100) # adding a breaking line
         st.subheader('Summary Statistics per Continent & Sub-region')
-        col1, col2, col3 = st.beta_columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
         continuous_var = col1.selectbox('Continuous variable', Y_vars+X_vars)
         grouping_var_sum_stats = col2.selectbox('Grouping variable', ['Continent', 'Sub Region'], 0)
         agg_func = col3.multiselect('Aggregation function', 
@@ -81,13 +82,13 @@ if passw=='my_pass':
 
         st.markdown('_'*100) # adding a breaking line
         st.subheader('Visualizations')
-        col1_bar, col2_bar = st.beta_columns([1, 1])
+        col1_bar, col2_bar = st.columns([1, 1])
         x_var_bar = col1_bar.selectbox('X variable (histogram)', df.columns.tolist(), 6)
         grouping_var_bar = col2_bar.selectbox('Grouping variable (barplot)', grouping_vars)
         st.plotly_chart(px.histogram(df, x_var_bar, color=grouping_var_bar), use_container_width=True) 
 
         st.markdown('_'*100) # adding a breaking line
-        col1_box, col2_box, col3_box = st.beta_columns(3)
+        col1_box, col2_box, col3_box = st.columns(3)
         x_var_box = col1_box.selectbox('X variable (boxplot)', grouping_vars, 1)
         y_var_box = col2_box.selectbox('Y variable (boxplot)', df.columns.tolist(), 10)
         grouping_var_box = col3_box.selectbox('Color variable (boxplot)', grouping_vars, 0)
@@ -98,7 +99,7 @@ if passw=='my_pass':
 
     if navigation == 'Simple Linear Regression':
         st.markdown('_'*100) # adding a breaking line
-        col1_scatter, col2_scatter, col3_scatter = st.beta_columns(3)
+        col1_scatter, col2_scatter, col3_scatter = st.columns(3)
         x_var_scatter = col1_scatter.selectbox('X variable (scatter)', X_vars, 1)
         y_var_scatter = col2_scatter.selectbox('Y variable (scatter)', Y_vars, 2)
         grouping_var_scatter = col3_scatter.selectbox('Color variable (scatter)', grouping_vars, 0)
@@ -135,7 +136,6 @@ if passw=='my_pass':
                                       y_var_scatter, 
                                       color=grouping_var_scatter, 
                                       hover_data=['Country'], 
-                                    #   trendline="ols",
                                       title=f'Correlation coefficient: {round(correlation, 5)}')
         
         scatter_plot.add_trace(go.Scatter(x=x_seq, y=y_pred, 
