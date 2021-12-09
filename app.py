@@ -52,8 +52,8 @@ if passw=='my_pass':
         '''
         The aim of this project is to assess the impact of economic and educational factors of
         different countries on COVID vaccination rates.
-        The data on 112 countries was obtained from [Trading Economics.](https://tradingeconomics.com/)
-        and WorldBank.
+        The data on 112 countries was obtained from [Trading Economics](https://tradingeconomics.com/)
+        and [WorldBank](https://data.worldbank.org/).
         '''
         profiling_table = pd.DataFrame({
             'Number of variables' : [df.shape[1]],
@@ -99,14 +99,14 @@ if passw=='my_pass':
 
     if navigation == 'Simple Linear Regression':
         st.markdown('_'*100) # adding a breaking line
-        col1_scatter, col2_scatter, col3_scatter = st.columns(3)
+        col1_scatter, col2_scatter, col3_scatter, col4_scatter = st.columns(4)
         x_var_scatter = col1_scatter.selectbox('X variable (scatter)', X_vars, 1)
         y_var_scatter = col2_scatter.selectbox('Y variable (scatter)', Y_vars, 2)
         grouping_var_scatter = col3_scatter.selectbox('Color variable (scatter)', grouping_vars, 0)
 
 
         # Transformations
-        x_transformation = st.selectbox('Transformatin of X variable', 
+        x_transformation = col4_scatter.selectbox('Transformatin of X variable', 
                                         ['No transformation', 'log', 'square'], 0)
         
         x_seq = np.linspace(min(df[x_var_scatter]), max(df[x_var_scatter]), 100)
@@ -145,17 +145,48 @@ if passw=='my_pass':
         st.write(results.summary())
 
     if navigation == 'Multiple Linear Regression':
-        x_vars_model = st.multiselect('X variables', X_vars, ['Gdp Per Cap Ppp'])
+
+        # Transformations
+        x_vars_no_trans = st.multiselect('X variables with no transformation', X_vars, X_vars[0])
+        x_vars_log = st.multiselect('X variables with log transformation', X_vars, None)
+        x_vars_square = st.multiselect('X variables with polynomial (square) transformation', X_vars, None)
+
+        X_log = df.set_index('Country')[x_vars_log].apply(lambda x: np.log(x))
+        X_log.columns = [f'{i} log' for i in X_log.columns]
+        X_square = df.set_index('Country')[x_vars_square].apply(lambda x: x**2)
+        X_square.columns = [f'{i} sq' for i in X_square.columns]
+
+        if x_vars_log:
+            x_vars_model = df.set_index('Country')[x_vars_no_trans].reset_index().\
+                merge(X_log.reset_index()).drop('Country', axis=1)
+            if x_vars_square:
+                x_vars_model = df.set_index('Country')[x_vars_no_trans].reset_index().\
+                merge(X_log.reset_index()).merge(X_square.reset_index()).drop('Country', axis=1)
+        elif x_vars_square:
+            x_vars_model = df.set_index('Country')[x_vars_no_trans].reset_index().\
+                merge(X_square.reset_index()).drop('Country', axis=1)
+            if x_vars_log:
+                x_vars_model = df.set_index('Country')[x_vars_no_trans].reset_index().\
+                merge(X_log.reset_index()).merge(X_square.reset_index()).drop('Country', axis=1)
+        else:
+            x_vars_model = df[x_vars_no_trans]
         y_var_model = st.radio('Y variable', Y_vars, 2)
-        Y = df[y_var_model]
-        X = df[x_vars_model]
+        log_y = st.checkbox('Use log of Y instead of Y')
+        if log_y:
+            Y = np.log(df[y_var_model])
+        else:
+            Y = df[y_var_model]
+        X = x_vars_model
         X = sm.add_constant(X)
         model = sm.OLS(Y,X, missing='drop')
         results = model.fit()
         st.write('### Model Results')
         st.write(results.summary())
         st.write('### Correlation Matrix')
-        st.table(df[[y_var_model]+x_vars_model].dropna().corr())
+        corr_df = x_vars_model
+        corr_df[y_var_model] = Y
+        corr_mat = corr_df.dropna().corr()
+        st.plotly_chart(px.imshow(corr_mat), use_container_width=True)
 
 
 
