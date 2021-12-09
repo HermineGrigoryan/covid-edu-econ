@@ -12,8 +12,7 @@ X_vars = ['gdp_growth_rate', 'gdp_per_cap_PPP',
        'inflation_rates', 'corruption_rank', 'population', 
        'gov_exp_on_edu_percent_of_gdp', 'gov_exp_on_edu_perc_per_student',
         'gov_exp_per_stud_tertiary_perc', 'pupil_teacher_ratio_primary',
-        'youth_literacy_rate',
-       'Continent', 'Sub Region']
+        'youth_literacy_rate', 'gini_index']
 X_vars = [i.replace('_', ' ').title() for i in X_vars]
 
 Y_vars = ['covid_death_rate', 'covid_cases_rate', 'covid_vaccination_rate']
@@ -52,7 +51,7 @@ if passw=='my_pass':
         '''
         The aim of this project is to assess the impact of economic and educational factors of
         different countries on COVID vaccination rates.
-        The data on 112 countries was obtained from [Trading Economics](https://tradingeconomics.com/)
+        The data on 106 countries was obtained from [Trading Economics](https://tradingeconomics.com/)
         and [WorldBank](https://data.worldbank.org/).
         '''
         profiling_table = pd.DataFrame({
